@@ -75,10 +75,10 @@ module zx48
 	
 	output wire STM_RST,
 	
-	output wire       spi_ck,
-	output wire       spi_cs,
-	output wire       spi_di,
-	input wire        spi_do
+	output wire	sd_cs_n,
+	output wire	sd_sclk,
+	output wire	sd_mosi,
+	input wire	sd_miso
 `endif
 );
 //-------------------------------------------------------------------------------------------------
@@ -446,7 +446,13 @@ user_io #(.STRLEN(($size(CONF_STR)>>3))) userIo
 );
 `else
 wire [7:0]R_OSD,G_OSD,B_OSD;
-wire host_scandoubler_disable;
+wire host_scandoubler_disable,host_divert_sdcard;
+wire OSD_miso,OSD_mosi,OSD_sclk,OSD_cs_n;
+assign sd_cs_n  = spi_cs; //host_divert_sdcard ? OSD_cs_n : spi_cs;
+assign sd_sclk  = spi_ck; //host_divert_sdcard ? OSD_sclk : spi_ck;
+assign sd_mosi  = spi_do; //host_divert_sdcard ? OSD_mosi : spi_do;
+assign OSD_miso = 1'b0; //host_divert_sdcard ? sd_miso : 1'b0;
+assign spi_di   = sd_miso; //host_divert_sdcard ? 1'b0    : sd_miso;
 
 data_io data_io
 (
@@ -474,6 +480,7 @@ data_io data_io
 	.key_pressed(ps2Prsd ),
 	.key_extended(),	
 	.host_scandoubler_disable(host_scandoubler_disable),
+	.host_divert_sdcard(host_divert_sdcard),
 	
 `ifndef JOYDC
 	.JOY_CLK(JOY_CLK),
@@ -489,11 +496,11 @@ data_io data_io
 	.dac_SDIN(SDIN),
 	.L_data(16'h0000),
 	.R_data(16'h0000),
-	
-	.spi_miso(sd_miso),
-	.spi_mosi(sd_mosi),
-	.spi_clk(sd_sclk),
-	.spi_cs(sd_cs_n),
+
+	.spi_miso(OSD_miso),
+	.spi_mosi(OSD_mosi),
+	.spi_clk(OSD_sclk),
+	.spi_cs(OSD_cs_n),
 
 	.img_mounted(img_mounted),
 	.img_size(img_size),

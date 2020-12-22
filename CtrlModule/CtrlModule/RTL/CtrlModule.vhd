@@ -38,6 +38,7 @@ entity data_io is
 		key_extended : out std_logic;
 		
 		host_scandoubler_disable : buffer std_logic;
+		host_divert_sdcard : out std_logic;
 		
 	   --Joystick
 		JOY_CLK    : out std_logic;
@@ -144,7 +145,7 @@ signal host_bootdata_adr_W : std_logic_vector(24 downto 0);
 signal host_bootdata_req   : std_logic;
 signal host_bootdata_ack   : std_logic :='0';
 
-signal		host_divert_sdcard : std_logic;
+--signal		host_divert_sdcard : std_logic;
 signal		host_divert_keyboard :std_logic;
 signal		host_reset     : std_logic;
 signal		host_video     : std_logic;

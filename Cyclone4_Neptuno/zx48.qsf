@@ -112,10 +112,11 @@ set_location_assignment PIN_U2 -to ramA[2]
 set_location_assignment PIN_V1 -to ramA[1]
 set_location_assignment PIN_V2 -to ramA[0]
 
-set_location_assignment PIN_E22 -to spi_ck
-set_location_assignment PIN_D22 -to spi_cs
-set_location_assignment PIN_E21 -to spi_do
-set_location_assignment PIN_D21 -to spi_di
+set_location_assignment PIN_E22 -to sd_sclk
+set_location_assignment PIN_D22 -to sd_cs_n
+set_location_assignment PIN_E21 -to sd_miso
+set_location_assignment PIN_D21 -to sd_mosi
+set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to sd_miso
 
 set_location_assignment PIN_N19 -to ps2_clk
 set_location_assignment PIN_N20 -to ps2_data
