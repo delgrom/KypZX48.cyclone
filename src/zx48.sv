@@ -2,6 +2,7 @@
 module zx48
 //-------------------------------------------------------------------------------------------------
 (
+`ifndef CYCLONE
 	input  wire       clock27,
 
 	output wire       led,
@@ -29,12 +30,71 @@ module zx48
 	input  wire       spiS3,
 	input  wire       spiDi,
 	output wire       spiDo
+`else
+	input  wire       clock50,
+
+	output wire       led,
+
+	output wire[ 1:0] sync,
+	output wire[17:0] rgb,
+
+	output wire VGA_BLANK, //Reloaded
+	output wire VGA_CLOCK, //Reloaded
+
+	input  wire       ear,
+	output wire[ 1:0] audio,
+
+	output wire       ramCk,
+	output wire       ramCe,
+	output wire       ramCs,
+	output wire       ramWe,
+	output wire       ramRas,
+	output wire       ramCas,
+	output wire[ 1:0] ramDqm,
+	inout  wire[15:0] ramDQ,
+	output wire[ 1:0] ramBA,
+	output wire[12:0] ramA,
+	
+	inout wire	ps2_clk,
+	inout wire	ps2_data,
+	// Joysticks
+
+`ifndef JOYDC
+	output wire	JOY_CLK,
+	output wire	JOY_LOAD,
+	input  wire JOY_DATA,
+	output wire JOY_SELECT,
+`else
+	input	wire [5:0]joystick1,
+	input	wire [5:0]joystick2,
+`endif	
+	output wire	MCLK,
+	output wire	SCLK,
+	output wire	LRCLK,
+	output wire	SDIN,
+	
+	output wire STM_RST,
+	
+	output wire       spi_ck,
+	output wire       spi_cs,
+	output wire       spi_di,
+	input wire        spi_do
+`endif
 );
 //-------------------------------------------------------------------------------------------------
+`ifdef CYCLONE
+assign STM_RST = 1'b0; 
+assign VGA_BLANK = 1'b1;
+assign VGA_CLOCK = clock56;
+`endif
 
 clock Clock
 (
+`ifndef CYCLONE
 	.inclk0(clock27),
+`else
+	.inclk0(clock50),
+`endif	
 	.c0    (clock56),
 	.c1    (clock28),
 	.locked(clockOn)
@@ -290,7 +350,19 @@ wire[31:0] status;
 wire[ 7:0] ps2Code;
 wire       ps2Strb;
 wire       ps2Prsd;
-wire       scandoubler_disable;
+`ifndef JOYDC
+wire  [7:0] joystick_0;
+wire  [7:0] joystick_1;
+`else
+wire  [7:0] joystick_0 = ~{1'b11,joystick1};
+wire  [7:0] joystick_1 = ~{1'b11,joystick2};
+`endif
+
+`ifndef CYCLONE
+wire        scandoubler_disable;
+`else
+wire        scandoubler_disable = !host_scandoubler_disable;
+`endif
 
 wire       sd_ack_conf;
 wire       sd_conf;
@@ -312,7 +384,7 @@ wire[31:0] img_size;
 wire osdRs = ~status[0];
 wire osdNmi = ~status[1];
 wire osdMix = ~status[5];
-
+`ifndef CYCLONE
 user_io #(.STRLEN(($size(CONF_STR)>>3))) userIo
 ( 
 	.*,
@@ -372,6 +444,71 @@ user_io #(.STRLEN(($size(CONF_STR)>>3))) userIo
 	.core_mod(),
 	.rtc()
 );
+`else
+wire [7:0]R_OSD,G_OSD,B_OSD;
+wire host_scandoubler_disable;
+
+data_io data_io
+(
+	.clk(clock56),
+	.CLOCK_50(clock50), //Para modulos de I2s y Joystick
+	
+	.debug(),
+	
+	.reset_n(clockOn),
+
+	.vga_hsync(~vduHs),
+	.vga_vsync(~vduVs),
+	
+	.red_i({vduRGB[17:12],2'b00}),
+	.green_i({vduRGB[11:6],2'b00}),
+	.blue_i({vduRGB[5:0],2'b00}),
+	.red_o(R_OSD),
+	.green_o(G_OSD),
+	.blue_o(B_OSD),
+	
+	.ps2k_clk_in(ps2_clk),
+	.ps2k_dat_in(ps2_data),
+	.key_code(ps2Code ),
+	.key_strobe(ps2Strb ),
+	.key_pressed(ps2Prsd ),
+	.key_extended(),	
+	.host_scandoubler_disable(host_scandoubler_disable),
+	
+`ifndef JOYDC
+	.JOY_CLK(JOY_CLK),
+	.JOY_LOAD(JOY_LOAD),
+	.JOY_DATA(JOY_DATA),
+	.JOY_SELECT(JOY_SELECT),
+	.joy1(joystick_0),
+	.joy2(joystick_1),
+`endif
+	.dac_MCLK(MCLK),
+	.dac_LRCK(LRCLK),
+	.dac_SCLK(SCLK),
+	.dac_SDIN(SDIN),
+	.L_data(16'h0000),
+	.R_data(16'h0000),
+	
+	.spi_miso(sd_miso),
+	.spi_mosi(sd_mosi),
+	.spi_clk(sd_sclk),
+	.spi_cs(sd_cs_n),
+
+	.img_mounted(img_mounted),
+	.img_size(img_size),
+
+	.status(status),
+	
+	.ioctl_ce(ce_14m),
+	.ioctl_wr(ioctl_wr),
+	.ioctl_addr(ioctl_addr),
+	.ioctl_dout(ioctl_dout),
+	.ioctl_download(ioctl_download),
+	.ioctl_index({ioctl_ext_index, ioctl_index}),
+	.ioctl_file_ext()
+`endif
+);
 
 mist_video mistVideo
 (
@@ -385,9 +522,9 @@ mist_video mistVideo
 	.ypbpr       (1'b0       ),
 	.rotate      (2'b00      ),
 	.blend       (1'b0       ),
-	.R           (vduRGB[17:12]),
-	.G           (vduRGB[11: 6]),
-	.B           (vduRGB[ 5: 0]),
+	.R           (R_OSD[7:2] ),
+	.G           (G_OSD[7:2] ),
+	.B           (B_OSD[7:2] ),
 	.HSync       (~vduHs     ),
 	.VSync       (~vduVs     ),
 	.VGA_R       (rgb[17:12] ),
@@ -398,6 +535,7 @@ mist_video mistVideo
 	.scandoubler_disable(scandoubler_disable)
 );
 
+`ifndef CYCLONE
 sd_card sdCard
 (
 	.*,
@@ -411,7 +549,7 @@ sd_card sdCard
 	.sd_wr     (sd_wr[0]),
 	.img_mounted(img_mounted[0])
 );
-
+`endif
 //-------------------------------------------------------------------------------------------------
 endmodule
 //-------------------------------------------------------------------------------------------------
