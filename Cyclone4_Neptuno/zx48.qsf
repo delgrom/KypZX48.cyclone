@@ -117,6 +117,11 @@ set_location_assignment PIN_D22 -to spi_cs
 set_location_assignment PIN_E21 -to spi_do
 set_location_assignment PIN_D21 -to spi_di
 
+set_location_assignment PIN_N19 -to ps2_clk
+set_location_assignment PIN_N20 -to ps2_data
+set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to ps2_clk
+set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to ps2_data
+
 set_location_assignment PIN_A20 -to JOY_CLK
 set_location_assignment PIN_B20 -to JOY_LOAD
 set_location_assignment PIN_B19 -to JOY_DATA
