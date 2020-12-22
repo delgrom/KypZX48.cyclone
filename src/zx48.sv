@@ -332,8 +332,8 @@ assign d
 
 //-------------------------------------------------------------------------------------------------
 
-assign led = ~sd_busy;
-
+//assign led = ~sd_busy;
+assign led = ~ioctl_download;
 //-------------------------------------------------------------------------------------------------
 
 localparam CONF_STR = {
@@ -448,11 +448,11 @@ user_io #(.STRLEN(($size(CONF_STR)>>3))) userIo
 wire [7:0]R_OSD,G_OSD,B_OSD;
 wire host_scandoubler_disable,host_divert_sdcard;
 wire OSD_miso,OSD_mosi,OSD_sclk,OSD_cs_n;
-assign sd_cs_n  = spi_cs; //host_divert_sdcard ? OSD_cs_n : spi_cs;
-assign sd_sclk  = spi_ck; //host_divert_sdcard ? OSD_sclk : spi_ck;
-assign sd_mosi  = spi_do; //host_divert_sdcard ? OSD_mosi : spi_do;
-assign OSD_miso = 1'b0; //host_divert_sdcard ? sd_miso : 1'b0;
-assign spi_di   = sd_miso; //host_divert_sdcard ? 1'b0    : sd_miso;
+assign sd_cs_n  = host_divert_sdcard ? OSD_cs_n : spi_cs;
+assign sd_sclk  = host_divert_sdcard ? OSD_sclk : spi_ck;
+assign sd_mosi  = host_divert_sdcard ? OSD_mosi : spi_do;
+assign OSD_miso = host_divert_sdcard ? sd_miso  : 1'b0;
+assign spi_di   = host_divert_sdcard ? 1'b0     : sd_miso;
 
 data_io data_io
 (
@@ -461,7 +461,7 @@ data_io data_io
 	
 	.debug(),
 	
-	.reset_n(clockOn),
+	.reset_n(clockOn), //clockOn
 
 	.vga_hsync(~vduHs),
 	.vga_vsync(~vduVs),
