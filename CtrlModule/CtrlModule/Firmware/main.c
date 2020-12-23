@@ -19,23 +19,6 @@ int OSD_Puts(char *str)
 	return(1);
 }
 
-/*
-void TriggerEffect(int row)
-{
-	int i,v;
-	Menu_Hide();
-	for(v=0;v<=16;++v)
-	{
-		for(i=0;i<4;++i)
-			PS2Wait();
-
-		HW_HOST(REG_HOST_SCALERED)=v;
-		HW_HOST(REG_HOST_SCALEGREEN)=v;
-		HW_HOST(REG_HOST_SCALEBLUE)=v;
-	}
-	Menu_Show();
-}
-*/
 void Delay()
 {
 	int c=16384; // delay some cycles
@@ -57,6 +40,7 @@ void Reset(int row)
 	HW_HOST(REG_HOST_CONTROL)=HOST_CONTROL_RESET|HOST_CONTROL_DIVERT_KEYBOARD; // Reset host core
 	Delay();
 	HW_HOST(REG_HOST_CONTROL)=HOST_CONTROL_DIVERT_KEYBOARD;
+	Menu_Hide();
 }
 
 void Video(int row)
@@ -67,28 +51,16 @@ void Video(int row)
 	HW_HOST(REG_HOST_CONTROL)=HOST_CONTROL_DIVERT_KEYBOARD;
 }
 
+void NMI(int row)
+{
+	
+	Menu_Hide();
+	HW_HOST(REG_HOST_CONTROL)=HOST_CONTROL_NMI|HOST_CONTROL_DIVERT_KEYBOARD; // Send start
+	Delay();
+	HW_HOST(REG_HOST_CONTROL)=0;
+}
+
 static struct menu_entry topmenu[]; // Forward declaration.
-/*
-// RGB scaling submenu
-static struct menu_entry rgbmenu[]=
-{
-	{MENU_ENTRY_SLIDER,"Red",MENU_ACTION(16)},
-	{MENU_ENTRY_SLIDER,"Green",MENU_ACTION(16)},
-	{MENU_ENTRY_SLIDER,"Blue",MENU_ACTION(16)},
-	{MENU_ENTRY_SUBMENU,"Exit",MENU_ACTION(topmenu)},
-	{MENU_ENTRY_NULL,0,0}
-};
-
-
-// Test pattern names
-static char *testpattern_labels[]=
-{
-	"Test pattern 1",
-	"Test pattern 2",
-	"Test pattern 3",
-	"Test pattern 4"
-};
-*/
 
 static char *st_scanlines[]=
 {
@@ -98,79 +70,22 @@ static char *st_scanlines[]=
 	"Scanlines CRT 75%"
 };
 
-static char *st_video[]=
+static char *st_aymix[]=
 {
-	"ULA-48",
-	"ULA-128",
-	"Pentagon"
-};
-
-static char *st_memory[]=
-{
-	"Spectrum 128K",
-	"Pentagon 1024K",
-	"Profi 1024K",
-	"Spectrum 48K",
-	"Spectrum +2A/+3"
-};
-
-static char *st_joy1[]=
-{
-	"Joy 1: Sinclair I",
-	"Joy 1: Sinclair II",
-	"Joy 1: Kemston",
-	"Joy 1: Cursor"
-};
-
-static char *st_joy2[]=
-{
-	"Joy 2: Sinclair I",
-	"Joy 2: Sinclair II",
-	"Joy 2: Kemston",
-	"Joy 2: Cursor"
-};
-
-static char *st_fasttape[]=
-{
-	"Carga de Cinta Rapida",
-	"Carga de Cinta Normal"
-};
-
-static char *st_feat[]=
-{
-	"Ula+ & Timex",
-	"Normal"
-};
-
-static char *st_mmc[]=
-{
-	"MMC Card off",
-	"divMMC",
-	"ZXMMC"
-};
-
-static char *st_gsnd[]=
-{
-	"General Sound 2MB",
-	"General Sound Desactivado"
+	"AY mixer ACB",
+	"AY mixer ABC"
 };
 
 // Our toplevel menu
 static struct menu_entry topmenu[]=
 {
 //      NUMERO MAXIMO DE LINEAS EN MENU SON 16 (PARA MAS HACER SUBMENUS)
-//	{MENU_ENTRY_CALLBACK,"   =SPECTRUM=   ",0},
-//	{MENU_ENTRY_CALLBACK,"                ",0},
+	{MENU_ENTRY_CALLBACK,"     =KypZX=    ",0},
+	{MENU_ENTRY_CALLBACK,"                ",0},
 	{MENU_ENTRY_CALLBACK,"Reset",MENU_ACTION(&Reset)},
+	{MENU_ENTRY_CALLBACK,"NMI",MENU_ACTION(&NMI)},
 	{MENU_ENTRY_CYCLE,(char *)st_scanlines,MENU_ACTION(4)}, 
-	{MENU_ENTRY_CYCLE,(char *)st_joy1,MENU_ACTION(5)}, 
-	{MENU_ENTRY_CYCLE,(char *)st_joy2,MENU_ACTION(5)}, 
-	{MENU_ENTRY_CYCLE,(char *)st_mmc,MENU_ACTION(3)}, 
-	{MENU_ENTRY_CYCLE,(char *)st_gsnd,MENU_ACTION(2)}, 
-	{MENU_ENTRY_CYCLE,(char *)st_feat,MENU_ACTION(2)}, 
-	{MENU_ENTRY_CYCLE,(char *)st_video,MENU_ACTION(3)}, 
-	{MENU_ENTRY_CYCLE,(char *)st_memory,MENU_ACTION(5)},
-	{MENU_ENTRY_CYCLE,(char *)st_fasttape,MENU_ACTION(2)},
+	{MENU_ENTRY_CYCLE,(char *)st_aymix,MENU_ACTION(2)}, 
 	{MENU_ENTRY_CALLBACK,"Cargar Disco/Cinta \x10",MENU_ACTION(&FileSelector_Show)},
 	{MENU_ENTRY_CALLBACK,"Exit",MENU_ACTION(&Menu_Hide)},
 	{MENU_ENTRY_NULL,0,0}
@@ -191,6 +106,8 @@ static int LoadMED(const char *filename)
 	int result=0;
 	int opened;
 
+	HW_HOST(REG_HOST_CONTROL)=HOST_CONTROL_LOADMED | HOST_CONTROL_DIVERT_SDCARD;
+
 	if((opened=FileOpen(&file,filename)))
 	{
 		int filesize=file.size;
@@ -199,8 +116,7 @@ static int LoadMED(const char *filename)
 
 		HW_HOST(REG_HOST_ROMSIZE) = file.size;
 		HW_HOST(REG_HOST_ROMEXT) = ((char)filename[10])+((char)filename[9]<<8)+((char)filename[8]<<16); //Pasa 24 Bits las 3 letras de la Extension en el registro de 31 bits (la primera en los bits 23:16 la segunda  en 15:7 y la tercera en 7:0	
-		HW_HOST(REG_HOST_CONTROL)=HOST_CONTROL_LOADMED|HOST_CONTROL_DIVERT_SDCARD;
-
+		
 		bits=0;
 		c=filesize-1;
 		while(c)
@@ -244,7 +160,7 @@ static int LoadMED(const char *filename)
 	}
 
 	SuperDelay();
-	HW_HOST(REG_HOST_CONTROL)=HOST_CONTROL_DIVERT_SDCARD;
+	HW_HOST(REG_HOST_CONTROL)=0;
 
 	if(result)
 		{
@@ -314,7 +230,7 @@ static int LoadROM(const char *filename)
 	}
 	HW_HOST(REG_HOST_ROMSIZE) = file.size;
 	SuperDelay();
-	HW_HOST(REG_HOST_CONTROL)=HOST_CONTROL_DIVERT_SDCARD;
+	HW_HOST(REG_HOST_CONTROL)=0;
 	return(result);
 }
 
@@ -325,28 +241,21 @@ int main(int argc,char **argv)
 	int dipsw=0;
 
 	// Put the host core in reset while we initialise...
-	//HW_HOST(REG_HOST_CONTROL)=HOST_CONTROL_RESET;
-
-	HW_HOST(REG_HOST_CONTROL)=HOST_CONTROL_DIVERT_SDCARD;
+	HW_HOST(REG_HOST_CONTROL)=HOST_CONTROL_RESET|HOST_CONTROL_DIVERT_SDCARD;
 
 	PS2Init();
 	EnableInterrupts();
 
 	OSD_Clear();
-//	for(i=0;i<4;++i)
-//	{
-//		PS2Wait();	// Wait for an interrupt - most likely VBlank, but could be PS/2 keyboard
-//		OSD_Show(1);	// Call this over a few frames to let the OSD figure out where to place the window.
-//	}
-//	OSD_Puts("Initializing SD card\n");
 
 	if(!FindDrive())
 		return(0);
 
 	//OSD_Puts("Loading initial ROM...\n");
-	LoadROM("SPECTRUMDAT");
+	//LoadROM("SPECTRUMDAT");
 	FileSelector_SetLoadFunction(LoadMED);
 	Menu_Set(topmenu);
+
 	Menu_Hide();//oculta el menu por defecto al cargar el core.
 	//Menu_Show(); //muestra el menu por defecto al cargar el core.
 
@@ -358,20 +267,12 @@ int main(int argc,char **argv)
 		visible=Menu_Run();
 		dipsw = 0;
 		//Posicion 3 del menu, 0x3 = 2 bits max, <<9 = dips[1:0]	
-		dipsw |= (MENU_CYCLE_VALUE(&topmenu[1])  & 0x3) << 0; //[1:0] 
-		dipsw |= (MENU_CYCLE_VALUE(&topmenu[2])  & 0x3) << 2; //[3:2]
-		dipsw |= (MENU_CYCLE_VALUE(&topmenu[3])  & 0x3) << 4; //[5:4]
-		dipsw |= (MENU_CYCLE_VALUE(&topmenu[4])  & 0x3) << 6; //[7:6]
-		dipsw |= (MENU_CYCLE_VALUE(&topmenu[5])  & 0x1) << 8; //[8]
-		dipsw |= (MENU_CYCLE_VALUE(&topmenu[6])  & 0x1) << 9; //[9]
-		dipsw |= (MENU_CYCLE_VALUE(&topmenu[7])  & 0x3) << 10; //[11:10]
-		dipsw |= (MENU_CYCLE_VALUE(&topmenu[8])  & 0x7) << 12; //[14:12]
-		dipsw |= (MENU_CYCLE_VALUE(&topmenu[9])  & 0x1) << 15; //[15]
+		dipsw |= (MENU_CYCLE_VALUE(&topmenu[4])  & 0x3) << 0; //[1:0] 
+		dipsw |= (MENU_CYCLE_VALUE(&topmenu[5])  & 0x1) << 2; //[2]
 		HW_HOST(REG_HOST_SW)=dipsw;	// Send the new values to the hardware.
 		// If the menu's visible, prevent keystrokes reaching the host core.
 		HW_HOST(REG_HOST_CONTROL)=(visible ?
-									HOST_CONTROL_DIVERT_KEYBOARD|HOST_CONTROL_DIVERT_SDCARD :
-									HOST_CONTROL_DIVERT_SDCARD); // Maintain control of the SD card so the file selector can work.
+									HOST_CONTROL_DIVERT_KEYBOARD|HOST_CONTROL_DIVERT_SDCARD : 0); // Maintain control of the SD card so the file selector can work.
 																 // If the host needs SD card access then we would release the SD
 																 // card here, and not attempt to load any further files.
 	}

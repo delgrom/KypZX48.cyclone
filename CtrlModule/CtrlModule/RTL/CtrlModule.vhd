@@ -1,3 +1,7 @@
+--------------------------------------------------------------
+-- Control Module to simulate a Mist-Arm menu by NeuroRulez --
+--------------------------------------------------------------
+
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.numeric_std.ALL;
@@ -7,7 +11,7 @@ use work.zpupkg.ALL;
 
 entity data_io is
 	generic (
-		sysclk_frequency : integer := 640 --500 -- Sysclk frequency * 10 
+		sysclk_frequency : integer := 560 --500 -- Sysclk frequency * 10 
 	);
 	port (
 		clk 			: in std_logic;
@@ -148,6 +152,7 @@ signal host_bootdata_ack   : std_logic :='0';
 --signal		host_divert_sdcard : std_logic;
 signal		host_divert_keyboard :std_logic;
 signal		host_reset     : std_logic;
+signal		host_nmi       : std_logic;
 signal		host_video     : std_logic;
 signal		host_video_d   : std_logic;
 signal		host_loadrom   : std_logic := '0';		
@@ -366,6 +371,7 @@ begin
 		int_enabled<='0';
 		kbdrecvreg <='0';
 		host_reset <='0';
+		host_nmi <='0';
 		host_loadrom <='0'; --Se usa para lanzar la se�al de que ha empezado una carga de rom
 		host_loadmed <='0';
 		host_video <= '0';
@@ -427,7 +433,7 @@ begin
 							host_loadrom<=mem_write(3);
 							host_video<=mem_write(4);
 							host_loadmed<=mem_write(5);
-							--host_xxx  <=mem_write(6);
+							host_nmi<=mem_write(6);
 							--host_xxx  <=mem_write(7);
 
 --						when X"F0" => -- Scale Red
@@ -590,19 +596,10 @@ img_size <= x"00000000" & size;
 --img_size <= x"00000000" & x"0002F900";
 
 status(0)<=host_reset;
-status(2 downto 1)<=dipswitches(3 downto 2); --st_joy1
-status(4 downto 3)<=dipswitches(5 downto 4); --st_joy2
-status(5)<='0';
-status(6)<=dipswitches(15); --st_fasttape
-status(7)<='0';
-status(9  downto  8) <= dipswitches(11 downto 10); --st_video_ULA
-status(12 downto 10) <= dipswitches(14 downto 12); --st_memory "100" Plus3
-status(14 downto 13) <= dipswitches(9) & dipswitches(9); --st_feat Recortado 00 = ULA+ & TIMEX 11=Desactivado
-status(16 downto 15) <= dipswitches( 1 downto  0);  --st_scanlines
-status(18 downto 17) <= dipswitches( 7 downto  6);  --st_mmc
-status(19)<='0';
-status(21 downto 20) <= '1' & dipswitches(8);  --st_gsnd Recortado 11 = Off / 10 = GS_2MB
-status(31 downto 22) <= (others => '0');
+status(1)<=host_nmi;
+status(4 downto 3)<=dipswitches(1 downto 0); --st_scanlines
+status(5)<=dipswitches(5); --st_aymix
+status(31 downto 6) <= (others => '0');
 
 debug <= '1' when ioctl_index = X"04" else '0';
 

@@ -319,11 +319,13 @@ usd uSD
 
 //-------------------------------------------------------------------------------------------------
 
+wire io1F = !(!iorq && !a[5]);                     // Kempston
 wire ioEB = !(!iorq && a[7:0] == 8'hEB); // uSD
 wire ioFFFD = !(!iorq && a[15] && a[14] && !a[1]); // psg
 
 assign d
 	= !mreq ? memQ
+	: !io1F ? { joystick_0 }
 	: !ioEB ? usdQ
 	: !ioFE ? { 1'b1, ~ear|speaker, 1'b1, keyQ }
 	: !ioFFFD ? psgQ
@@ -333,7 +335,7 @@ assign d
 //-------------------------------------------------------------------------------------------------
 
 //assign led = ~sd_busy;
-assign led = ~ioctl_download;
+assign led = host_divert_sdcard; //~ioctl_download;
 //-------------------------------------------------------------------------------------------------
 
 localparam CONF_STR = {
@@ -361,7 +363,7 @@ wire  [7:0] joystick_1 = ~{1'b11,joystick2};
 `ifndef CYCLONE
 wire        scandoubler_disable;
 `else
-wire        scandoubler_disable = !host_scandoubler_disable;
+wire        scandoubler_disable = host_scandoubler_disable;
 `endif
 
 wire       sd_ack_conf;
@@ -507,15 +509,16 @@ data_io data_io
 
 	.status(status),
 	
-	.ioctl_ce(ce_14m),
+	.ioctl_ce(1'b1),
 	.ioctl_wr(ioctl_wr),
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_dout),
 	.ioctl_download(ioctl_download),
 	.ioctl_index({ioctl_ext_index, ioctl_index}),
 	.ioctl_file_ext()
-`endif
 );
+`endif
+
 
 mist_video mistVideo
 (

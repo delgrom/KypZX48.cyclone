@@ -44,6 +44,8 @@ set_global_assignment -name PROJECT_CREATION_TIME_DATE "16:21:26  SEPTEMBER 18, 
 set_global_assignment -name LAST_QUARTUS_VERSION "17.1.0 Lite Edition"
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
 set_global_assignment -name NUM_PARALLEL_PROCESSORS ALL
+set_global_assignment -name GENERATE_RBF_FILE ON
+set_global_assignment -name ON_CHIP_BITSTREAM_DECOMPRESSION OFF
 
 # Pin & Location Assignments
 # ==========================
